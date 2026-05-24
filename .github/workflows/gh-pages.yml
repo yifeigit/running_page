@@ -2,6 +2,29 @@ name: Publish GitHub Pages
 
 # Controls when the action will run.
 on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.editorconfig'
+      - '.gitignore'
+      - '.prettier*'
+      - 'Dockerfile'
+      - 'nginx.conf'
+      - 'vercel.json'
+      - '.vercelignore'
+      - 'docker-compose.yml'
+      - 'run_page/**'
+      - 'GPX_OUT/**'
+      - 'TCX_OUT/**'
+      - 'FIT_OUT/**'
+      - 'PNG_OUT/**'
+      - 'Workouts/**'
+      - 'activities/**'
+      - 'imported.json'
   workflow_dispatch:
     inputs:
       save_data_in_github_cache:
