@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>我的跑步轨迹</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1f232c; --line:#2a2f3a;
+    --text:#e7eaf0; --muted:#8b93a3; --accent:#4ade80; --accent2:#38bdf8;
+    --fast:#4ade80; --slow:#f87171; --hr:#fb7185; --warn:#fbbf24;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;}
+  a{color:var(--accent2);text-decoration:none}
+  header{padding:18px 20px 10px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#161a22,#0f1115);}
+  h1{margin:0;font-size:20px;font-weight:700;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:12px;margin-top:4px}
+  .stats{display:flex;flex-wrap:wrap;gap:10px;padding:14px 20px 4px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:10px 14px;min-width:96px;flex:1}
+  .stat .v{font-size:22px;font-weight:700}
+  .stat .k{font-size:11px;color:var(--muted);margin-top:2px}
+  .layout{display:grid;grid-template-columns:minmax(340px,42%) 1fr;gap:14px;padding:14px 20px 40px}
+  @media(max-width:880px){.layout{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .card h2{margin:0;padding:12px 14px;font-size:14px;border-bottom:1px solid var(--line);
+    display:flex;justify-content:space-between;align-items:center}
+  .card .body{padding:12px 14px}
+  #map{width:100%;height:360px;background:#0c0e12}
+  .fallback{width:100%;height:360px}
+  .notice{background:#2a200a;border:1px solid #5a4408;color:var(--warn);
+    font-size:12px;padding:8px 12px;border-radius:10px;margin:10px 14px;line-height:1.5}
+  .list{max-height:330px;overflow:auto}
+  .item{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;
+    border-bottom:1px solid var(--line);cursor:pointer;font-size:13px}
+  .item:hover{background:var(--panel2)}
+  .item.active{background:#16241c;border-left:3px solid var(--accent)}
+  .item .d{color:var(--muted);font-size:12px}
+  .item .m{text-align:right}
+  .item .m .p{font-weight:700}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:7px;vertical-align:middle}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px}
+  .chip{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:7px 11px;font-size:12px}
+  .chip b{font-size:15px;display:block;margin-top:2px}
+  .chart-wrap{margin:6px 0 16px}
+  .chart-title{font-size:12px;color:var(--muted);margin:8px 2px 4px}
+  svg{display:block;width:100%}
+  .tooltip{position:fixed;pointer-events:none;background:#000d;border:1px solid var(--line);
+    border-radius:8px;padding:6px 9px;font-size:12px;color:var(--text);z-index:50;display:none;white-space:nowrap}
+  .search{width:100%;padding:8px 10px;background:var(--panel2);border:1px solid var(--line);
+    border-radius:9px;color:var(--text);font-size:13px;margin-bottom:8px}
+  .search::placeholder{color:var(--muted)}
+  .empty{color:var(--muted);font-size:13px;text-align:center;padding:30px 10px}
+  footer{color:var(--muted);font-size:11px;text-align:center;padding:0 20px 30px;line-height:1.7}
+  .legend{display:flex;gap:14px;font-size:11px;color:var(--muted);padding:0 14px 10px;flex-wrap:wrap}
+  .legend i{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
+  .badge{font-size:10px;background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:2px 8px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏃 我的跑步轨迹</h1>
+  <div class="sub" id="subtitle">数据来源：yayarun（COROS）· 加载中…</div>
+</header>
+
+<div class="stats" id="stats"></div>
+
+<div class="layout">
+  <!-- 左列：地图 + 列表 -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div class="card">
+      <h2>起点地图 <span class="badge" id="mapbadge">…</span></h2>
+      <div id="map"></div>
+      <div class="legend" id="maplg" style="display:none">
+        <span><i style="background:var(--fast)"></i>快</span>
+        <span><i style="background:var(--slow)"></i>慢</span>
+        <span>点大小 = 距离</span>
+      </div>
+      <div class="notice" id="keynote" style="display:none"></div>
+    </div>
+    <div class="card">
+      <h2>跑步记录 <span class="badge" id="listcount"></span></h2>
+      <div class="body">
+        <input class="search" id="search" placeholder="搜索日期 / 距离，如 2026-06 或 10">
+        <div class="list" id="list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右列：详情 + 总览 -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div class="card">
+      <h2 id="detailTitle">跑步详情 <span class="badge">点地图或列表查看</span></h2>
+      <div class="body" id="detail">
+        <div class="empty">从左侧选择一次跑步，查看每公里配速、心率与爬升的交互图表。</div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>总览趋势</h2>
+      <div class="body">
+        <div class="chart-title">配速趋势（越低越快）</div>
+        <div class="chart-wrap" id="trendPace"></div>
+        <div class="chart-title">每周里程（km）</div>
+        <div class="chart-wrap" id="trendWeek"></div>
+        <div class="chart-title">累计里程（km）</div>
+        <div class="chart-wrap" id="trendCum"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer id="footer"></footer>
+<div class="tooltip" id="tip"></div>
+
+<!-- 跑步数据（由 build_data.py 生成，自动刷新时重建） -->
+<script src="data/runs.js"></script>
+<script>
+/* ============ 配置 ============ */
+// 高德地图 JS API Key（免费申请：https://lbs.amap.com/  → 创建应用 → 添加 Key（Web端JS API））
+// 替换下面这行为你自己的 key 即可启用真实地图；不填则自动降级为点位分布图。
+const AMAP_KEY = "Please apply for your own key at the AMap Open Platform and replace this placeholder";
+const USING_REAL_MAP = !AMAP_KEY.includes("Please apply");
+
+const RUNS = (window.RUNS || []).slice().sort((a,b)=>a.date<b.date?-1:1);
+const META = window.RUN_META || {};
+const tip = document.getElementById('tip');
+
+/* ============ 工具 ============ */
+const fmtDur = s=>{ if(s==null)return'-'; s=Math.round(s); const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;
+  return h?`${h}小时${m}分`:(m?`${m}分${x}秒`:`${x}秒`); };
+const fmtPace = p=> p==null?'-':`${Math.floor(p)}'${String(Math.round((p%1)*60)).padStart(2,'0')}"/km`;
+const fmtDate = d=> d? d.slice(0,10):'-';
+const paceColor = (p,min,max)=>{ if(p==null)return '#888'; const t=Math.min(1,Math.max(0,(p-min)/(max-min||1)));
+  // 快(绿)->慢(红)
+  const c1=[74,222,128], c2=[248,113,113];
+  const r=Math.round(c1[0]+(c2[0]-c1[0])*t),g=Math.round(c1[1]+(c2[1]-c1[1])*t),b=Math.round(c1[2]+(c2[2]-c1[2])*t);
+  return `rgb(${r},${g},${b})`; };
+
+/* ============ 顶部统计 ============ */
+function renderStats(){
+  const totalKm = RUNS.reduce((s,r)=>s+r.dist,0);
+  const totalH = RUNS.reduce((s,r)=>s+(r.dur||0),0)/3600;
+  const best = RUNS.reduce((m,r)=> (r.pace&&(!m||r.pace<m.pace))?r:m, null);
+  const longest = RUNS.reduce((m,r)=> r.dist>m.dist?r:m, RUNS[0]);
+  const el = document.getElementById('stats');
+  const items = [
+    ['总里程', totalKm.toFixed(1)+' km'],
+    ['跑步次数', RUNS.length+' 次'],
+    ['总时长', totalH.toFixed(0)+' 小时'],
+    ['最快配速', best?fmtPace(best.pace):'-'],
+    ['最长距离', longest?longest.dist.toFixed(1)+' km':'-'],
+    ['最近一次', RUNS.length?fmtDate(RUNS[RUNS.length-1].date):'-'],
+  ];
+  el.innerHTML = items.map(([k,v])=>`<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`).join('');
+  document.getElementById('subtitle').textContent =
+    `数据来源：yayarun（COROS）· 共 ${RUNS.length} 次 · 最后更新 ${META.generated||'-'} · 注：无逐点GPS，轨迹以每公里分段呈现`;
+}
+
+/* ============ SVG 折线/面积图（带 hover） ============ */
+function lineChart(box, data, opt){
+  // data: [{x:Number, y:Number|null, label, tip}]
+  opt = opt||{};
+  const W = box.clientWidth||box.offsetWidth||360, H = opt.h||150;
+  const padL=38, padR=12, padT=10, padB=24;
+  const iw = W-padL-padR, ih = H-padT-padB;
+  const xs = data.map(d=>d.x), ys = data.map(d=>d.y).filter(v=>v!=null);
+  const xmin=Math.min(...xs), xmax=Math.max(...xs);
+  let ymin=opt.ymin!=null?opt.ymin:Math.min(...ys), ymax=opt.ymax!=null?opt.ymax:Math.max(...ys);
+  if(ymin===ymax){ymin-=1;ymax+=1;}
+  const X = x=> padL + (xmax===xmin?iw/2:(x-xmin)/(xmax-xmin)*iw);
+  const Y = y=> padT + ih - (y-ymin)/(ymax-ymin)*ih;
+  const ns='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(ns,'svg'); svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.setAttribute('width','100%'); svg.setAttribute('height',H);
+  // 网格 + Y 轴标签
+  const ticks=4;
+  for(let i=0;i<=ticks;i++){ const v=ymin+(ymax-ymin)*i/ticks; const yy=Y(v);
+    const ln=document.createElementNS(ns,'line'); ln.setAttribute('x1',padL);ln.setAttribute('x2',W-padR);ln.setAttribute('y1',yy);ln.setAttribute('y2',yy);
+    ln.setAttribute('stroke','#232833');ln.setAttribute('stroke-width','1');svg.appendChild(ln);
+    const tx=document.createElementNS(ns,'text');tx.setAttribute('x',padL-5);tx.setAttribute('y',yy+3);tx.setAttribute('text-anchor','end');
+    tx.setAttribute('fill','#8b93a3');tx.setAttribute('font-size','10');tx.textContent=opt.yfmt?opt.yfmt(v):Math.round(v);svg.appendChild(tx);
+  }
+  // X 轴标签（首/中/尾）
+  [0, Math.floor(data.length/2), data.length-1].forEach(i=>{ if(data[i]&&data[i].label){ const xx=X(data[i].x);
+    const tx=document.createElementNS(ns,'text');tx.setAttribute('x',xx);tx.setAttribute('y',H-6);tx.setAttribute('text-anchor','middle');
+    tx.setAttribute('fill','#8b93a3');tx.setAttribute('font-size','10');tx.textContent=data[i].label;svg.appendChild(tx);} });
+  // 面积/线
+  const pts = data.filter(d=>d.y!=null).map(d=>`${X(d.x)},${Y(d.y)}`).join(' ');
+  if(opt.fill){ const area=`${padL},${Y(ymin)} ${pts} ${X(xmax)},${Y(ymin)}`;
+    const ar=document.createElementNS(ns,'polygon');ar.setAttribute('points',area);ar.setAttribute('fill',opt.fill);ar.setAttribute('opacity','.25');svg.appendChild(ar);}
+  const pl=document.createElementNS(ns,'polyline');pl.setAttribute('points',pts);pl.setAttribute('fill','none');
+  pl.setAttribute('stroke',opt.color||'#4ade80');pl.setAttribute('stroke-width','2');pl.setAttribute('stroke-linejoin','round');svg.appendChild(pl);
+  // 点
+  data.forEach(d=>{ if(d.y==null)return; const c=document.createElementNS(ns,'circle');
+    c.setAttribute('cx',X(d.x));c.setAttribute('cy',Y(d.y));c.setAttribute('r','2.5');c.setAttribute('fill',opt.color||'#4ade80');svg.appendChild(c);});
+  // hover 层
+  const overlay=document.createElementNS(ns,'rect');overlay.setAttribute('x',padL);overlay.setAttribute('y',padT);
+  overlay.setAttribute('width',iw);overlay.setAttribute('height',ih);overlay.setAttribute('fill','transparent');svg.appendChild(overlay);
+  overlay.addEventListener('mousemove',e=>{ const r=svg.getBoundingClientRect();
+    const mx=(e.clientX-r.left)/r.width*W; const rel=(mx-padL)/iw*(xmax-xmin)+xmin;
+    let idx=0,best=1e9; data.forEach((d,i)=>{const dd=Math.abs(d.x-rel); if(dd<best){best=dd;idx=i;}});
+    const d=data[idx]; if(!d)return; showTip(e.clientX,e.clientY, d.tip||`${d.label}: ${opt.tipfmt?opt.tipfmt(d.y):d.y}`);
+    // 高亮点
+    hl(idx);
+  });
+  overlay.addEventListener('mouseleave',()=>{ tip.style.display='none'; hl(-1); });
+  function hl(idx){ svg.querySelectorAll('circle.hl').forEach(c=>c.remove());
+    if(idx<0||data[idx].y==null)return; const c=document.createElementNS(ns,'circle');
+    c.setAttribute('class','hl');c.setAttribute('cx',X(data[idx].x));c.setAttribute('cy',Y(data[idx].y));c.setAttribute('r','4.5');
+    c.setAttribute('fill',opt.color||'#4ade80');c.setAttribute('stroke','#fff');c.setAttribute('stroke-width','1.5');svg.appendChild(c);}
+  box.innerHTML=''; box.appendChild(svg);
+}
+function showTip(x,y,txt){ tip.textContent=txt; tip.style.display='block';
+  tip.style.left=(x+12)+'px'; tip.style.top=(y+12)+'px'; }
+
+/* ============ 柱状图 ============ */
+function barChart(box, data, opt){
+  opt=opt||{}; const W=box.clientWidth||360,H=opt.h||150,padL=38,padR=12,padT=10,padB=24;
+  const iw=W-padL-padR,ih=H-padT-padB; const ns='http://www.w3.org/2000/svg';
+  const ymax=Math.max(...data.map(d=>d.y),1);
+  const bw=iw/data.length*0.7, gap=iw/data.length;
+  const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('width','100%');svg.setAttribute('height',H);
+  for(let i=0;i<=4;i++){const v=ymax*i/4,yy=padT+ih-v/ymax*ih;
+    const ln=document.createElementNS(ns,'line');ln.setAttribute('x1',padL);ln.setAttribute('x2',W-padR);ln.setAttribute('y1',yy);ln.setAttribute('y2',yy);
+    ln.setAttribute('stroke','#232833');svg.appendChild(ln);
+    const tx=document.createElementNS(ns,'text');tx.setAttribute('x',padL-5);tx.setAttribute('y',yy+3);tx.setAttribute('text-anchor','end');
+    tx.setAttribute('fill','#8b93a3');tx.setAttribute('font-size','10');tx.textContent=Math.round(v);svg.appendChild(tx);}
+  data.forEach((d,i)=>{ const x=padL+gap*i+(gap-bw)/2; const h=d.y/ymax*ih; const y=padT+ih-h;
+    const r=document.createElementNS(ns,'rect');r.setAttribute('x',x);r.setAttribute('y',y);r.setAttribute('width',bw);r.setAttribute('height',Math.max(0,h));
+    r.setAttribute('rx','2');r.setAttribute('fill',d.color||opt.color||'#38bdf8');svg.appendChild(r);
+    const tx=document.createElementNS(ns,'text');tx.setAttribute('x',x+bw/2);tx.setAttribute('y',H-6);tx.setAttribute('text-anchor','middle');
+    tx.setAttribute('fill','#8b93a3');tx.setAttribute('font-size','9');tx.textContent=d.label;svg.appendChild(tx);
+    r.addEventListener('mousemove',e=>showTip(e.clientX,e.clientY,d.tip||`${d.full}: ${d.y}`));
+    r.addEventListener('mouseleave',()=>tip.style.display='none');});
+  box.innerHTML=''; box.appendChild(svg);
+}
+
+/* ============ 列表 ============ */
+let activeId=null;
+function renderList(filter){
+  const box=document.getElementById('list');
+  const f=(filter||'').trim().toLowerCase();
+  const rows=RUNS.filter(r=> !f || r.date.toLowerCase().includes(f) || String(r.dist).includes(f) || fmtPace(r.pace).includes(f));
+  document.getElementById('listcount').textContent=rows.length+' 次';
+  if(!rows.length){ box.innerHTML='<div class="empty">没有匹配的跑步</div>'; return; }
+  const paces=RUNS.map(r=>r.pace).filter(p=>p!=null); const pmin=Math.min(...paces),pmax=Math.max(...paces);
+  box.innerHTML=rows.map(r=>`<div class="item ${r.id===activeId?'active':''}" data-id="${r.id}">
+    <div><span class="dot" style="background:${paceColor(r.pace,pmin,pmax)}"></span>${fmtDate(r.date)} <span class="d">周${'日一二三四五六'[new Date(r.date).getDay()]}</span></div>
+    <div class="m"><div class="p">${r.dist.toFixed(2)} km</div><div class="d">${fmtPace(r.pace)} · ${r.ahr||'-'}bpm</div></div>
+  </div>`).join('');
+  box.querySelectorAll('.item').forEach(it=>it.onclick=()=>selectRun(it.dataset.id));
+}
+
+/* ============ 详情 ============ */
+function selectRun(id){
+  activeId=id; renderList(document.getElementById('search').value);
+  const r=RUNS.find(x=>x.id===id); if(!r)return;
+  document.getElementById('detailTitle').innerHTML=`${fmtDate(r.date)} 跑步详情 <span class="badge">${r.dist.toFixed(2)} km</span>`;
+  const d=document.getElementById('detail');
+  const chips=[
+    ['距离',r.dist.toFixed(2)+' km'],['用时',fmtDur(r.dur)],['平均配速',fmtPace(r.pace)],
+    ['平均心率',(r.ahr||'-')+' bpm'],['最大心率',(r.mhr||'-')+' bpm'],['步频',(r.cad||'-')],
+    ['爬升',(r.egain||'-')+' m'],['消耗',(r.kcal||'-')+' kcal'],['步幅',(r.stride||'-')+' cm'],['功率',(r.power||'-')+' W'],
+  ];
+  let html=`<div class="chips">${chips.map(([k,v])=>`<div class="chip">${k}<b>${v}</b></div>`).join('')}</div>`;
+  if(r.segs&&r.segs.length){
+    html+=`<div class="chart-title">每公里配速（越低越快）</div><div class="chart-wrap" id="segPace"></div>
+           <div class="chart-title">每公里心率</div><div class="chart-wrap" id="segHr"></div>
+           <div class="chart-title">每公里爬升 (m)</div><div class="chart-wrap" id="segEg"></div>`;
+  } else {
+    html+=`<div class="empty">该次无每公里分段数据</div>`;
+  }
+  d.innerHTML=html;
+  if(r.segs&&r.segs.length){
+    const segs=r.segs;
+    lineChart(document.getElementById('segPace'),
+      segs.map((s,i)=>({x:i,y:s.pace,label:'第'+(i+1)+'km',tip:`第${s.km}公里 · ${fmtPace(s.pace)} · ${s.hr||'-'}bpm`})),
+      {color:'#4ade80',yfmt:v=>Math.floor(v)+"'"+Math.round((v%1)*60)+'"',tipfmt:fmtPace,h:150});
+    lineChart(document.getElementById('segHr'),
+      segs.map((s,i)=>({x:i,y:s.hr,label:'第'+(i+1)+'km',tip:`第${s.km}公里 · ${s.hr||'-'} bpm`})),
+      {color:'#fb7185',yfmt:v=>Math.round(v),tipfmt:v=>Math.round(v)+' bpm',h:130});
+    barChart(document.getElementById('segEg'),
+      segs.map(s=>({y:s.egain||0,label:''+s.km,full:'第'+s.km+'公里',tip:(s.egain||0)+' m'})),
+      {color:'#38bdf8',h:120});
+  }
+  document.getElementById('detail').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+/* ============ 总览 ============ */
+function renderOverview(){
+  // 配速趋势
+  const pdata=RUNS.map((r,i)=>({x:i,y:r.pace,label:fmtDate(r.date).slice(5),tip:`${fmtDate(r.date)} · ${fmtPace(r.pace)}`}));
+  lineChart(document.getElementById('trendPace'),pdata,{color:'#4ade80',yfmt:v=>Math.floor(v)+"'",tipfmt:fmtPace,h:160});
+  // 每周里程
+  const wk={}; RUNS.forEach(r=>{ const d=new Date(r.date); const y=d.getFullYear();
+    let w=Math.floor((d-new Date(y,0,1))/86400000/7); const k=y+'-W'+w; wk[k]=(wk[k]||0)+r.dist; });
+  const wkArr=Object.keys(wk).sort().map(k=>({y:+wk[k].toFixed(1),label:k.slice(5),full:k}));
+  barChart(document.getElementById('trendWeek'),wkArr,{color:'#38bdf8',h:160});
+  // 累计里程
+  let cum=0; const cumArr=RUNS.map((r,i)=>{cum+=r.dist;return {x:i,y:+cum.toFixed(1),label:fmtDate(r.date).slice(5),tip:`截至${fmtDate(r.date)} · ${cum.toFixed(1)} km`};});
+  lineChart(document.getElementById('trendCum'),cumArr,{color:'#a78bfa',fill:'#a78bfa',ymin:0,tipfmt:v=>v+' km',h:160});
+}
+
+/* ============ 地图 ============ */
+function initMap(){
+  const badge=document.getElementById('mapbadge');
+  if(!USING_REAL_MAP){ renderFallback(); badge.textContent='降级模式'; return; }
+  badge.textContent='高德地图';
+  const s=document.createElement('script');
+  s.src=`https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}`;
+  s.onerror=()=>{renderFallback(); badge.textContent='加载失败';};
+  s.onload=()=>{
+    try{
+      const pmin=Math.min(...RUNS.map(r=>r.pace).filter(p=>p!=null)),pmax=Math.max(...RUNS.map(r=>r.pace).filter(p=>p!=null));
+      const center=RUNS.length?new AMap.LngLat(RUNS[0].lng,RUNS[0].lat):new AMap.LngLat(121.47,31.23);
+      const map=new AMap.Map('map',{zoom:5,center});
+      const markers=RUNS.map(r=>{
+        const sz=Math.max(10,Math.min(26,r.dist*1.4));
+        const el=document.createElement('div');
+        el.style.cssText=`width:${sz}px;height:${sz}px;border-radius:50%;background:${paceColor(r.pace,pmin,pmax)};
+          border:2px solid #0f1115;box-shadow:0 0 6px rgba(0,0,0,.5);cursor:pointer`;
+        const mk=new AMap.Marker({position:new AMap.LngLat(r.lng,r.lat),content:el,title:fmtDate(r.date)});
+        mk.on('click',()=>selectRun(r.id));
+        return mk;
+      });
+      map.add(markers);
+      document.getElementById('maplg').style.display='flex';
+    }catch(e){ renderFallback(); badge.textContent='出错'; }
+  };
+  document.head.appendChild(s);
+}
+function renderFallback(){
+  const box=document.getElementById('map'); box.className='fallback'; box.innerHTML='';
+  const ns='http://www.w3.org/2000/svg'; const W=box.clientWidth||360,H=360;
+  const lats=RUNS.map(r=>r.lat),lngs=RUNS.map(r=>r.lng);
+  const la0=Math.min(...lats),la1=Math.max(...lats),lo0=Math.min(...lngs),lo1=Math.max(...lngs);
+  const pmin=Math.min(...RUNS.map(r=>r.pace).filter(p=>p!=null)),pmax=Math.max(...RUNS.map(r=>r.pace).filter(p=>p!=null));
+  const pad=40, X=lo=>pad+(lo-lo0)/((lo1-lo0)||1)*(W-pad*2), Y=la=>H-pad-(la-la0)/((la1-la0)||1)*(H-pad*2);
+  const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('width','100%');svg.setAttribute('height',H);
+  svg.innerHTML=`<text x="${W/2}" y="20" fill="#8b93a3" font-size="11" text-anchor="middle">起点经纬度分布（未配置地图Key时的降级视图）</text>`;
+  RUNS.forEach(r=>{ const c=document.createElementNS(ns,'circle');
+    c.setAttribute('cx',X(r.lng));c.setAttribute('cy',Y(r.lat));c.setAttribute('r',Math.max(4,Math.min(11,r.dist)));
+    c.setAttribute('fill',paceColor(r.pace,pmin,pmax));c.setAttribute('opacity','.85');c.setAttribute('stroke','#0f1115');c.setAttribute('stroke-width','1.5');
+    c.style.cursor='pointer'; c.addEventListener('mousemove',e=>showTip(e.clientX,e.clientY,`${fmtDate(r.date)} · ${r.dist.toFixed(2)}km · ${fmtPace(r.pace)}`));
+    c.addEventListener('mouseleave',()=>tip.style.display='none'); c.addEventListener('click',()=>selectRun(r.id)); svg.appendChild(c);});
+  box.appendChild(svg);
+  const note=document.getElementById('keynote');
+  note.style.display='block';
+  note.innerHTML='未检测到高德地图 Key，已降级为点位分布图（核心轨迹/配速图表照常可用）。<br>申请免费 Key：访问 <a href="https://lbs.amap.com/" target="_blank">高德开放平台</a> → 创建应用 → 添加「Web端JS API」Key → 替换 <code>index.html</code> 中的 <code>AMAP_KEY</code> 即可显示真实地图。';
+  document.getElementById('maplg').style.display='flex';
+}
+
+/* ============ 启动 ============ */
+renderStats();
+renderList('');
+renderOverview();
+initMap();
+if(RUNS.length) selectRun(RUNS[RUNS.length-1].id);
+document.getElementById('search').addEventListener('input',e=>renderList(e.target.value));
+document.getElementById('footer').innerHTML=
+  `本页数据由 <b>yayarun（COROS）</b> 通过 WorkBuddy 拉取并自动生成 · 共 ${RUNS.length} 次跑步 · 生成于 ${META.generated||'-'}<br>`+
+  `说明：Coros 仅提供起点坐标与每公里分段，无逐点 GPS 轨迹，故「轨迹」以每公里配速/心率/爬升分段图呈现。<br>`+
+  `在微信中打开本页链接即可随时查看；数据每日自动刷新。`;
+</script>
+</body>
+</html>
