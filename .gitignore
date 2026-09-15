@@ -26,3 +26,17 @@ route.png
 route.svg
 
 .env
+
+# --- 本地专用文件：绝对不要提交 ---
+# 注意：.github/workflows/run_data_sync.yml 用的是 `git add .`，
+# 未在此忽略的未跟踪文件会被定时任务自动提交并推送到公开仓库。
+# run-local-*.bat 内含高驰账号密码明文，务必保持忽略状态。
+run-local-*.bat
+deploy-gitee.bat
+.claude/
+.workbuddy/
+_backup_local_*/
+analysis_report.html
+analyze_report.py
+_tmp_*.txt
+_analyze*.py
