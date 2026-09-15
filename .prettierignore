@@ -1,2 +1,5 @@
 src/static/activities.json
 pnpm-lock.yaml
+# 由 run_page/synced_data_file_logger.py 用 json.dump 生成的单行数组，属机器生成数据，
+# 每次同步都会被覆写，不应纳入 prettier 格式检查（否则 CI 必红）。
+imported.json

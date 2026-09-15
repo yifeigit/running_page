@@ -1,3 +1,9 @@
 -r requirements.txt
 # Ci
-black
+# 固定版本：CI 每次都会装最新 black，其换行策略随版本变化，
+# 曾导致 gen_svg.py 在无人改动的情况下被判定格式错误、CI 长期变红。
+black==26.5.1
+# 同理固定 ruff。注意：ci.yml 里还有一句 `pip install ruff`，
+# 因本文件先装了固定版本，该句会变成 "already satisfied" 而不会升级，
+# 从而让 CI 的 lint 结果稳定可复现。
+ruff==0.16.7

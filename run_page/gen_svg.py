@@ -5,6 +5,7 @@ import random  # 导入随机数库，用于随机打乱运动轨迹的顺序
 import sys  # 导入系统相关的库，用于处理系统退出等操作
 
 from config import SQL_FILE  # 从 config.py 中导入数据库文件路径
+
 # 导入生成海报的核心库 gpxtrackposter 中的各个绘图组件
 from gpxtrackposter import (
     circular_drawer,  # 圆形绘图器
@@ -229,9 +230,13 @@ def main():
         drawer.fetch_args(args)
 
     log = logging.getLogger("gpxtrackposter")  # 获取日志记录器
-    log.setLevel(logging.INFO if args.verbose else logging.ERROR)  # 根据 verbose 参数设置日志级别
+    log.setLevel(
+        logging.INFO if args.verbose else logging.ERROR
+    )  # 根据 verbose 参数设置日志级别
     if args.logfile:
-        handler = logging.FileHandler(args.logfile)  # 如果指定了日志文件，则添加文件处理器
+        handler = logging.FileHandler(
+            args.logfile
+        )  # 如果指定了日志文件，则添加文件处理器
         log.addHandler(handler)
 
     loader = track_loader.TrackLoader()  # 创建轨迹加载器
@@ -324,7 +329,9 @@ def main():
         for y in years:
             p.years.from_year, p.years.to_year = y, y
             p.set_tracks(tracks)  # 重新按年份过滤轨迹
-            p.draw(drawers[args.type], os.path.join(output_dir, f"year_{str(y)}.svg"))  # 生成每年的圆形图
+            p.draw(
+                drawers[args.type], os.path.join(output_dir, f"year_{str(y)}.svg")
+            )  # 生成每年的圆形图
     elif is_year_summary and args.summary_year is None:
         # 如果是年度总结类型且未指定具体某一年，则为所有年份生成总结图
         years = p.years.all()[:]
