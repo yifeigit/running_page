@@ -35,14 +35,15 @@ class TracksDrawer:
     ) -> str:
         assert length_range.is_valid()
 
-        color1 = (
-            self.poster.colors["special"] if is_special else self.poster.colors["track"]
-        )
-        color2 = (
-            self.poster.colors["special2"]
-            if is_special
-            else self.poster.colors["track2"]
-        )
+        # 特殊区间（special_distance < 距离 < special_distance2）统一返回纯 special 色，不做插值。
+        # 原因：图例（poster.__draw_footer）画的就是纯 special 色方块，如果这里在
+        # special -> special2 之间按长度插值，实际轨迹会落在中间的橙色段上，与图例对不上。
+        # 超过 special_distance2 的轨迹由各 drawer 自行赋 special2（纯色）。
+        if is_special:
+            return self.poster.colors["special"]
+
+        color1 = self.poster.colors["track"]
+        color2 = self.poster.colors["track2"]
 
         diff = length_range.diameter()
         if diff == 0:
