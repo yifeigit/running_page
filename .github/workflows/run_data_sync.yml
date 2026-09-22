@@ -23,6 +23,9 @@ on:
       - run_page/keep_to_strava_sync.py
       - run_page/oppo_sync.py
       - requirements.txt
+      # 本文件自身也列入：改了 special-distance 等参数后自动跑一次，重新生成 svg，
+      # 不用干等到下一个定时任务（12:00 / 22:00）才生效。
+      - .github/workflows/run_data_sync.yml
 
 env:
   # please change to your own config.
