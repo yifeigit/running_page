@@ -74,8 +74,28 @@ jobs:
           cache-dependency-path: 'requirements.txt'
 
       - name: Install dependencies
+        env:
+          # pip 默认 read timeout 只有 15s、retries 5 次，GitHub runner 访问 pypi.org
+          # 偶发抖动时会直接把整个 job 拖挂（2026-09-28 那次就是这么挂的：
+          # python-dateutil 的索引页连续 5 次 ReadTimeout，pip 转而逐个回溯 arrow 的历史
+          # 版本，最后退到 arrow 0.4.3 的 sdist 并报出误导性的 ModuleNotFoundError）。
+          # 这里把超时放宽到 60s，并在外层再套 3 轮重试兜底。
+          PIP_DEFAULT_TIMEOUT: '60'
+          PIP_RETRIES: '5'
         run: |
-          pip install -r requirements.txt
+          set -e
+          for attempt in 1 2 3; do
+            echo "::group::pip install attempt ${attempt}/3"
+            if pip install -r requirements.txt; then
+              echo "::endgroup::"
+              exit 0
+            fi
+            echo "::endgroup::"
+            echo "attempt ${attempt} failed; retrying in 20s..."
+            sleep 20
+          done
+          echo "pip install 连续 3 次失败，放弃" >&2
+          exit 1
 
       - name: Cache Data Files
         if: env.SAVE_DATA_IN_GITHUB_CACHE == 'true'
