@@ -30,8 +30,8 @@ dependencies:
     specifier: ^5.0.0
     version: 5.0.0(vite@7.1.2)
   gcoord:
-    specifier: ^0.3.2
-    version: 0.3.2
+    specifier: ^1.0.8
+    version: 1.0.8
   geojson:
     specifier: ^0.5.0
     version: 0.5.0
@@ -2813,8 +2813,9 @@ packages:
     resolution: {integrity: sha512-xckBUXyTIqT97tq2x2AMb+g163b5JFysYk0x4qxNFwbfQkmNZoiRHb6sPzI9/QV33WeuvVYBUIiD4NzNIyqaRQ==}
     dev: true
 
-  /gcoord@0.3.2:
-    resolution: {integrity: sha512-LwhA+ev6fBXadAFprI+Q593TTC1QYa0Quewd3YUT51wQS2S6gekrC1YCQlJhKA8HpqCF+dX+fBcX/lkYM5Kgog==}
+  /gcoord@1.0.8:
+    resolution: {integrity: sha512-bAXSEz9ezcFKHpLWUrOWaNRxH1l1SB3gjFseG9af5GCCrHRdMkEpC80+hhlK/RoAkpuXqtUNSlIeC45dbQBDCw==}
+    engines: {node: '>=16.11.0'}
     dev: false
 
   /gensync@1.0.0-beta.2:
