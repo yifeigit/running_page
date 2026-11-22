@@ -301,3 +301,5 @@ jobs:
       data_cache_prefix: ${{needs.sync.outputs.DATA_CACHE_PREFIX}}
     needs:
       - sync
+
+# migrated: standalone repo (2026-11-22)
